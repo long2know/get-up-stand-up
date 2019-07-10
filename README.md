@@ -1,4 +1,4 @@
-# Android Get Up Stand Up (For Your Health)
+# Get Up Stand Up (For Your Health)
 
 An open source tracker for Wear OS and Android
 

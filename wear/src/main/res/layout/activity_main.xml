@@ -1,25 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.wear.widget.BoxInsetLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.wear.widget.drawer.WearableDrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dark_grey"
-    android:padding="@dimen/box_inset_layout_padding"
+    android:background="@color/black"
     tools:context=".MainActivity"
     tools:deviceIds="wear">
 
-    <FrameLayout
+    <android.support.v4.widget.NestedScrollView
+        android:id="@+id/content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="@dimen/inner_frame_layout_padding"
-        app:boxedEdges="all">
+        android:fillViewport="true">
 
-        <TextView
-            android:id="@+id/text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/hello_world" />
+        <FrameLayout
+            android:id="@+id/content_frame"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-    </FrameLayout>
-</androidx.wear.widget.BoxInsetLayout>
+    </android.support.v4.widget.NestedScrollView>
+
+    <android.support.wear.widget.drawer.WearableNavigationDrawerView
+        android:id="@+id/top_navigation_drawer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/grey"
+        app:navigationStyle="multiPage" />
+
+    <android.support.wear.widget.drawer.WearableActionDrawerView
+        android:id="@+id/bottom_action_drawer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/grey"
+        app:actionMenu="@menu/action_drawer_menu" />
+
+</android.support.wear.widget.drawer.WearableDrawerLayout>

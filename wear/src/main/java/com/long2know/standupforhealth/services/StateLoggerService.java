@@ -29,16 +29,15 @@ import java.util.concurrent.TimeUnit;
 
 import static androidx.constraintlayout.widget.Constraints.TAG;
 
-public class SportLoggerService extends Service {
+public class StateLoggerService extends Service {
 
     private NotificationManager _notificationManager;
     private final IBinder _binder = new LocalBinder();
-    public static ISportLoggerServiceClient _serviceClient;
+    public static ILoggerServiceClient _serviceClient;
 
-    private Thread _sensorThread;
-    private Thread _locationThread;
-    private SensorListener _sensorListener;
-    private GpsListener _locationListener;
+    private Thread _transitionsThread;
+    private TransitionsListener _transitionsListener;
+
     private ScheduledExecutorService _scheduler;
     private StopWatch _stopWatch = new StopWatch();
 
@@ -61,13 +60,9 @@ public class SportLoggerService extends Service {
 
         _notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
-        _sensorListener = new SensorListener();
-        _locationListener = new GpsListener();
-
-        _sensorThread = new Thread(new SensorListener());
-        _locationThread = new Thread(new GpsListener());
-        _sensorThread.start();
-        _locationThread.start();
+        _transitionsListener = new TransitionsListener();
+        _transitionsThread = new Thread(_transitionsListener);
+        _transitionsThread.start();
 
 //        startLoggerService();
 //
@@ -101,14 +96,9 @@ public class SportLoggerService extends Service {
             });
         }
 
-        Message lmsg = _sensorListener.WorkerHandler.obtainMessage(0);
-        _sensorListener.WorkerHandler.sendMessage(lmsg);
-
-        Message gmsg = _locationListener.WorkerHandler.obtainMessage(0);
-        _locationListener.WorkerHandler.sendMessage(gmsg);
-
-        _sensorThread.interrupt();
-        _locationThread.interrupt();
+        Message tmsg = _transitionsListener.WorkerHandler.obtainMessage(0);
+        _transitionsListener.WorkerHandler.sendMessage(tmsg);
+        _transitionsThread.interrupt();
 
         _serviceClient = null;
         super.onDestroy();
@@ -121,7 +111,7 @@ public class SportLoggerService extends Service {
         PendingIntent pending = PendingIntent.getActivity(getBaseContext(), 0, contentIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT);
 
-        String channelId = "long2know_sport_logger";
+        String channelId = "long2know_standup_for_health";
         CharSequence name = "long2know_channel";
         NotificationChannel channel = new NotificationChannel(channelId, name,NotificationManager.IMPORTANCE_DEFAULT);
         _notificationManager.createNotificationChannel(channel);
@@ -130,7 +120,7 @@ public class SportLoggerService extends Service {
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setWhen(System.currentTimeMillis())
                 .setTicker("Hearty365")
-                .setContentTitle("SportLogger is running")
+                .setContentTitle("StandupForHealth is running")
                 .setContentText("Running in the background - tap notification to return to app.")
                 .setContentInfo("Info")
                 .setSmallIcon(R.drawable.ic_play_circle_outline_black_24dp)
@@ -146,7 +136,7 @@ public class SportLoggerService extends Service {
         }
     }
 
-    public static void setServiceClient(ISportLoggerServiceClient client) {
+    public static void setServiceClient(ILoggerServiceClient client) {
         _serviceClient = client;
     }
 
@@ -155,25 +145,23 @@ public class SportLoggerService extends Service {
      * the same process as its clients, we don't need to deal with IPC.
      */
     public class LocalBinder extends Binder {
-        public SportLoggerService getService() {
-            return SportLoggerService.this;
+        public StateLoggerService getService() {
+            return StateLoggerService.this;
         }
     }
 
-    public void startNewActivity() {
+    public void startMonitor() {
         // We can force reading at specific intervals like this
-        _scheduler = Executors.newScheduledThreadPool(1);
-        _scheduler.scheduleAtFixedRate(new SqlLogger(), 0, 1, TimeUnit.SECONDS);
+        //_scheduler = Executors.newScheduledThreadPool(1);
+        //_scheduler.scheduleAtFixedRate(new SqlLogger(), 0, 1, TimeUnit.SECONDS);
         _stopWatch.startTImer();
-        SqlLogger.initDatabase();
-        SharedData.getInstance().ActivityId = SqlLogger.createActivity();
         SharedData.getInstance().IsRecording = true;
         SharedData.getInstance().IsPaused = false;
-        CharSequence text = "Starting new activity";
+        CharSequence text = "Starting stand-up for health monitor";
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
     }
 
-    public void stopActivity() {
+    public void stopMonitor() {
         // We don't want to block the UI
         AsyncTask.execute(new Runnable() {
             @Override
@@ -210,7 +198,7 @@ public class SportLoggerService extends Service {
         });
 
         _stopWatch.pauseTimer();
-        CharSequence text = "Paused activity";
+        CharSequence text = "Paused monitoring";
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
     }
 
@@ -220,7 +208,7 @@ public class SportLoggerService extends Service {
         _scheduler.scheduleAtFixedRate(new SqlLogger(), 0, 1, TimeUnit.SECONDS);
         SharedData.getInstance().IsPaused = false;
         _stopWatch.startTImer();
-        CharSequence text = "Resuming activity";
+        CharSequence text = "Resuming monitoring";
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
     }
 

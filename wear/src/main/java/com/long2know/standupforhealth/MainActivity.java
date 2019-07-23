@@ -33,8 +33,9 @@ import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
-import com.long2know.standupforhealth.services.ISportLoggerServiceClient;
-import com.long2know.standupforhealth.services.SportLoggerService;
+import com.long2know.standupforhealth.logger.LogFragment;
+import com.long2know.standupforhealth.services.ILoggerServiceClient;
+import com.long2know.standupforhealth.services.StateLoggerService;
 import com.long2know.utilities.data_access.SqlLogger;
 import com.long2know.utilities.models.Config;
 import com.long2know.utilities.models.LocationData;
@@ -49,8 +50,9 @@ public class MainActivity extends FragmentActivity implements
         MenuItem.OnMenuItemClickListener,
         WearableNavigationDrawerView.OnItemSelectedListener,
         ActivityCompat.OnRequestPermissionsResultCallback,
-        ISportLoggerServiceClient {
+        ILoggerServiceClient {
 
+    private LogFragment _logFragment;
     private SensorFragment _sensorFragment;
     private StartActivityFragment _startFragment;
     private EndActivityFragment _endFragment;
@@ -58,7 +60,7 @@ public class MainActivity extends FragmentActivity implements
     private WearableNavigationDrawerView _wearableNavigationDrawer;
     private WearableActionDrawerView _wearableActionDrawer;
 
-    private SportLoggerService _loggingService;
+    private StateLoggerService _loggingService;
     private ServiceConnection _loggingServiceConnection;
     private static Intent _serviceIntent;
 
@@ -76,9 +78,12 @@ public class MainActivity extends FragmentActivity implements
         Config.activityContext = this;
 
         // Initialize the fragments and set set initial content.
+        Bundle largs = new Bundle();
         Bundle sargs = new Bundle();
         Bundle aargs = new Bundle();
         Bundle eargs = new Bundle();
+        _logFragment = new LogFragment();
+        _logFragment.setArguments(largs);
         _sensorFragment = new SensorFragment();
         _sensorFragment.setArguments(sargs);
         _startFragment = new StartActivityFragment();
@@ -113,7 +118,7 @@ public class MainActivity extends FragmentActivity implements
                 if (messageType == 0) {
                     LocationData data = (LocationData) msg.obj;
                     _sensorFragment.updateLocation(data);
-                } else {
+                } else if (messageType == 1) {
                     int sensorType = msg.arg1;
                     SensorEvent event = (SensorEvent) msg.obj;
 
@@ -134,6 +139,10 @@ public class MainActivity extends FragmentActivity implements
                             // Do nothing ..
                         }
                     }
+                } else {
+                    _logFragment
+                            .getLogView()
+                            .println((String)msg.obj);
                 }
             }
         };
@@ -166,8 +175,8 @@ public class MainActivity extends FragmentActivity implements
                 _loggingService = null;
             }
             public void onServiceConnected(ComponentName name, IBinder service)            {
-                _loggingService = ((SportLoggerService.LocalBinder) service).getService();
-                SportLoggerService.setServiceClient(MainActivity.this);
+                _loggingService = ((StateLoggerService.LocalBinder) service).getService();
+                StateLoggerService.setServiceClient(MainActivity.this);
             }
         };
     }
@@ -203,7 +212,7 @@ public class MainActivity extends FragmentActivity implements
 
     // Start the logger service and bind the activity to the service
     private void startAndBindService() {
-        _serviceIntent = new Intent(this, SportLoggerService.class);
+        _serviceIntent = new Intent(this, StateLoggerService.class);
 
         // Start the service in case it isn't already running
 //        startForegroundService(_serviceIntent);
@@ -229,14 +238,21 @@ public class MainActivity extends FragmentActivity implements
     }
 
     public void startNewActivity() {
-        _loggingService.startNewActivity();
-        _sensorFragment.startTImer();
-        _fragmentManager.beginTransaction().replace(R.id.content_frame, _sensorFragment).commit();
-        _wearableActionDrawer.getController().peekDrawer();
+        if (true) {
+            _loggingService.startMonitor();
+            // _sensorFragment.startTImer();
+            _fragmentManager.beginTransaction().replace(R.id.content_frame, _logFragment).commit();
+            _wearableActionDrawer.getController().peekDrawer();
+        } else {
+            _loggingService.startMonitor();
+            _sensorFragment.startTImer();
+            _fragmentManager.beginTransaction().replace(R.id.content_frame, _sensorFragment).commit();
+            _wearableActionDrawer.getController().peekDrawer();
+        }
     }
 
     public void stopActivity() {
-        _loggingService.stopActivity();
+        _loggingService.stopMonitor();
         _sensorFragment.pauseTimer();
         _sensorFragment.resetTimer();
 
@@ -248,19 +264,19 @@ public class MainActivity extends FragmentActivity implements
         try {
             // Transmit the activity to the phone
             // TODO: mark the transmission as complete
-            byte[] bytes = SportActivity.serialize(activity);
-            Asset asset = Asset.createFromBytes(bytes);
-            PutDataMapRequest dataMap = PutDataMapRequest.create(getString(R.string.wear_path));
-            dataMap.getDataMap().putAsset("sportActivity", asset);
-            PutDataRequest request = dataMap.asPutDataRequest();
-            Task<DataItem> putTask = Wearable.getDataClient(this).putDataItem(request);
+//            byte[] bytes = SportActivity.serialize(activity);
+//            Asset asset = Asset.createFromBytes(bytes);
+//            PutDataMapRequest dataMap = PutDataMapRequest.create(getString(R.string.wear_path));
+//            dataMap.getDataMap().putAsset("sportActivity", asset);
+//            PutDataRequest request = dataMap.asPutDataRequest();
+//            Task<DataItem> putTask = Wearable.getDataClient(this).putDataItem(request);
 
 //            PutDataRequest request = PutDataRequest.create(getString(R.string.wear_path));
 //            request.putAsset("sportActivity", asset);
 //            Task<DataItem> putTask = Wearable.getDataClient(this).putDataItem(request);
         }
         catch (Exception e) {
-            Log.e(TAG,"Could not serialize activity");
+            Log.e(TAG,"Could not serialize");
         }
 
         _fragmentManager.beginTransaction().replace(R.id.content_frame, _startFragment).commit();

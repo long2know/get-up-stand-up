@@ -37,6 +37,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".services.StateLoggerService"
+            android:enabled="true"
+            android:exported="true"
+            android:label="@string/service_name"
+            android:permission="com.google.android.gms.permission.ACTIVITY_RECOGNITION">
+        </service>
     </application>
 
 </manifest>
